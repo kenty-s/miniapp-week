@@ -22,11 +22,14 @@ body {
 /* トップページのスタイル */
 .opening-container {
   position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin: 20px auto;
+  overflow: hidden;
   text-align: center;
   padding: 20px;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 15px;
-  margin: 20px 0;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   min-height: auto;
   display: flex;
@@ -370,4 +373,19 @@ body {
   .table th, .table td {
     padding: 4px;
   }
+}
+
+.background-img,
+.shanks-img,
+.slash-img {
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.slash-img {
+  opacity: 0;
+  transform: rotate(-45deg) scale(0);
+  transition: all 0.5s ease;
 }
