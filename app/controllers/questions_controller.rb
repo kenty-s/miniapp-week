@@ -14,13 +14,19 @@ class QuestionsController < ApplicationController
 
     available_meats = []
     raw_meats.each do |meat|
-      Rails.logger.info "Processing meat: #{meat}"
-      meat.split("・").each do |individual_meat|
-        Rails.logger.info "  Individual meat: #{individual_meat}"
-        next if available_meats.include?(individual_meat)
+      Rails.logger.info "Processing meat: #{meat.inspect}"
+      if meat.blank?
+        Rails.logger.warn "Skipped blank meat value while building step2 options"
+        next
+      end
 
-        available_meats << individual_meat
-        Rails.logger.info "    Added: #{individual_meat}"
+      meat.split("・").each do |individual_meat|
+        normalized_meat = individual_meat.strip
+        Rails.logger.info "  Individual meat: #{normalized_meat}"
+        next if normalized_meat.blank? || available_meats.include?(normalized_meat)
+
+        available_meats << normalized_meat
+        Rails.logger.info "    Added: #{normalized_meat}"
       end
     end
     @available_meats = available_meats.sort

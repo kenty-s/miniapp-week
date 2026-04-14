@@ -100,12 +100,20 @@ class DebugController < ApplicationController
       processing_details = []
 
       raw_meats.each do |meat|
+        if meat.blank?
+          processing_details << "空の肉データをスキップ"
+          next
+        end
+
         meat.split('・').each do |individual_meat|
-          if available_meats.include?(individual_meat)
-            processing_details << "#{individual_meat}: 重複のためスキップ"
+          normalized_meat = individual_meat.strip
+          next if normalized_meat.blank?
+
+          if available_meats.include?(normalized_meat)
+            processing_details << "#{normalized_meat}: 重複のためスキップ"
           else
-            available_meats << individual_meat
-            processing_details << "#{individual_meat}: 追加"
+            available_meats << normalized_meat
+            processing_details << "#{normalized_meat}: 追加"
           end
         end
       end

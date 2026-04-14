@@ -20,16 +20,7 @@ div class="bg-gradient-to-r from-orange-100 to-orange-50 rounded-xl p-4 mb-6 bor
   - @available_meats.each do |meat|
     label.form-check data-action="click->form#selectOption" data-form-target="option" class="hover:shadow-lg transition-shadow duration-300 cursor-pointer"
       = radio_button_tag :meat, meat, false, class: "form-check-input", data: { action: "change->form#radioSelected" }
-      - label_text = case meat
-      - when "牛"
-        - "牛肉"
-      - when "豚"
-        - "豚肉"
-      - when "鶏"
-        - "鶏肉"
-      - else
-        - meat
-      span class="form-check-label" = label_text
+      span class="form-check-label" = display_meat_label(meat)
   br
   .button-group class="flex justify-center items-center mt-8"
     div class="flex space-x-4"
