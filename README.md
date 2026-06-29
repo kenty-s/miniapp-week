@@ -31,7 +31,7 @@
 プログラミングスクール「RUNTEQ」におけるイベント「ミニアプリウィーク」提出アプリ
 卒業制作前にアプリ開発の一連の流れを把握すべくClaudeCodeを使用しての開発
 
-## UI(アプリ停止中)
+## UI
 - favicon
 <br>
 <img width="200" src="image-7.png"><br>
