@@ -248,12 +248,26 @@ body {
 /* 結果ページスタイル */
 .result-container {
   background: rgba(255, 255, 255, 0.95);
-  padding: 30px 20px;
+  padding: 24px clamp(16px, 4vw, 48px);
   border-radius: 15px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  margin: 20px 0;
-  min-height: 70vh;
+  margin: 20px auto;
+  min-height: auto;
   overflow: hidden;
+}
+
+.result-table {
+  width: min(100%, 560px);
+  margin: 16px auto 0;
+}
+
+.result-table .table {
+  margin: 0 auto;
+}
+
+.result-container > div.mt-2.mb-1 {
+  width: min(100%, 560px);
+  margin: 14px auto 0;
 }
 
 .region-result h3 {
