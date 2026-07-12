@@ -8,8 +8,11 @@ fi
 
 # Prepare the production database before booting the web server.
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
-    ./bin/rails db:prepare
-    ./bin/rails db:seed
+    if ./bin/rails db:prepare && ./bin/rails db:seed; then
+        echo "Database prepared and seeded"
+    else
+        echo "Database prepare/seed skipped; continuing boot"
+    fi
 fi
 
 exec "${@}"
