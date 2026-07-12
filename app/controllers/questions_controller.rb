@@ -82,7 +82,7 @@ class QuestionsController < ApplicationController
     @region_records ||= begin
       records = Region.all.to_a
       records.presence || fallback_regions
-    rescue ActiveRecord::ActiveRecordError => e
+    rescue StandardError => e
       Rails.logger.warn("Falling back to static region data: #{e.class}: #{e.message}")
       fallback_regions
     end
@@ -110,7 +110,7 @@ class QuestionsController < ApplicationController
     return unless region.is_a?(Region)
 
     Vote.create!(region: region)
-  rescue ActiveRecord::ActiveRecordError => e
+  rescue StandardError => e
     Rails.logger.warn("Skipped vote recording: #{e.class}: #{e.message}")
   end
 end
