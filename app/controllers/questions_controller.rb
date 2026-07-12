@@ -1,38 +1,36 @@
 class QuestionsController < ApplicationController
+  FallbackRegion = Struct.new(:name, :meat, :seasoning, :feature, keyword_init: true)
+
+  FALLBACK_REGIONS = [
+    { name: "青森", meat: "鶏・豚", seasoning: "味噌", feature: "いももち入り、家庭差あり" },
+    { name: "岩手", meat: "鶏", seasoning: "醤油", feature: "醤油が基本、味噌派もあり" },
+    { name: "秋田", meat: "鶏・豚", seasoning: "醤油", feature: "根菜・きのこ多め、家庭ごとに差あり" },
+    { name: "宮城", meat: "豚", seasoning: "味噌", feature: "家庭では定番、川原芋煮は少ない" },
+    { name: "山形", meat: "牛", seasoning: "醤油", feature: "川原の大鍋文化、芋煮会で有名" },
+    { name: "福島", meat: "豚", seasoning: "醤油・味噌", feature: "地域で味付けが分かれ、家庭的に親しまれる" }
+  ].freeze
+
   def step1; end
 
   def step2
     session[:seasoning] = params[:seasoning] if params[:seasoning].present?
     return redirect_to(questions_step1_path, alert: "先に味付けを選んでください。") unless session[:seasoning].present?
 
-    Rails.logger.info "=== STEP2 DEBUG START ==="
-    Rails.logger.info "Seasoning selected: #{session[:seasoning]}"
-    Rails.logger.info "Code version: 2026-03-15-v1"
-
-    raw_meats = regions_for_selected_seasoning.distinct.pluck(:meat).uniq
-    Rails.logger.info "Raw meats from DB: #{raw_meats.inspect}"
-
+    raw_meats = regions_for_selected_seasoning.map(&:meat).uniq
     available_meats = []
+
     raw_meats.each do |meat|
-      Rails.logger.info "Processing meat: #{meat.inspect}"
-      if meat.blank?
-        Rails.logger.warn "Skipped blank meat value while building step2 options"
-        next
-      end
+      next if meat.blank?
 
       meat.split("・").each do |individual_meat|
         normalized_meat = individual_meat.strip
-        Rails.logger.info "  Individual meat: #{normalized_meat}"
         next if normalized_meat.blank? || available_meats.include?(normalized_meat)
 
         available_meats << normalized_meat
-        Rails.logger.info "    Added: #{normalized_meat}"
       end
     end
-    @available_meats = available_meats.sort
 
-    Rails.logger.info "Final available_meats: #{@available_meats.inspect}"
-    Rails.logger.info "=== STEP2 DEBUG END ==="
+    @available_meats = available_meats.sort
   end
 
   def step3
@@ -42,7 +40,7 @@ class QuestionsController < ApplicationController
     return redirect_to(questions_step2_path, alert: "先に肉を選んでください。") unless session[:meat].present?
 
     @available_regions = regions_for_selected_seasoning_and_meat
-    @available_features = @available_regions.distinct.pluck(:feature)
+    @available_features = @available_regions.map(&:feature).uniq
   end
 
   def result
@@ -53,56 +51,66 @@ class QuestionsController < ApplicationController
     return redirect_to(questions_step3_path, alert: "先に特徴を選んでください。") unless session[:feature].present?
 
     scoped_regions = regions_for_selected_seasoning_and_meat
-    @region = scoped_regions.find_by(feature: session[:feature])
+    @region = scoped_regions.find { |region| region.feature == session[:feature] }
     @region ||= scoped_regions.first
     @region ||= regions_for_selected_seasoning.first
 
-    Vote.create!(region: @region) if @region
+    record_vote(@region)
   end
 
   def respect
-    Rails.logger.info "=== RESPECT DEBUG START ==="
-    Rails.logger.info "Code version: 2024-09-21-v3"
-
-    all_regions = Region.all.to_a
-    Rails.logger.info "Total regions from DB: #{all_regions.count}"
-
-    all_regions.each do |region|
-      Rails.logger.info "Region ID #{region.id}: #{region.name} | #{region.seasoning} | #{region.meat} | #{region.feature}"
-    end
-
     unique_regions = {}
-    all_regions.each do |region|
-      if unique_regions[region.name]
-        Rails.logger.info "Duplicate detected for #{region.name}: skipping ID #{region.id}"
-      else
-        unique_regions[region.name] = region
-        Rails.logger.info "First record for #{region.name}: using ID #{region.id}"
-      end
+
+    region_records.each do |region|
+      unique_regions[region.name] ||= region
     end
 
     @regions = unique_regions.values.group_by(&:name)
-    Rails.logger.info "Final unique regions count: #{@regions.keys.count}"
-    Rails.logger.info "=== RESPECT DEBUG END ==="
   end
 
   private
 
   def regions_for_selected_seasoning
-    if session[:seasoning].in?(["醤油", "味噌"])
-      Region.where("seasoning = ? OR seasoning LIKE ?", session[:seasoning], "%#{session[:seasoning]}%")
-    else
-      Region.where(seasoning: session[:seasoning])
-    end
+    region_records.select { |region| seasoning_matches?(region, session[:seasoning]) }
   end
 
   def regions_for_selected_seasoning_and_meat
-    scope = regions_for_selected_seasoning
+    regions_for_selected_seasoning.select { |region| meat_matches?(region, session[:meat]) }
+  end
 
-    if session[:meat].in?(["鶏", "豚"])
-      scope.where("meat = ? OR meat LIKE ? OR meat = ?", session[:meat], "%#{session[:meat]}%", "鶏・豚")
-    else
-      scope.where("meat = ? OR meat LIKE ?", session[:meat], "%#{session[:meat]}%")
+  def region_records
+    @region_records ||= begin
+      records = Region.all.to_a
+      records.presence || fallback_regions
+    rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.warn("Falling back to static region data: #{e.class}: #{e.message}")
+      fallback_regions
     end
+  end
+
+  def fallback_regions
+    FALLBACK_REGIONS.map { |attributes| FallbackRegion.new(**attributes) }
+  end
+
+  def seasoning_matches?(region, seasoning)
+    return false if seasoning.blank?
+    return region.seasoning == seasoning || region.seasoning.to_s.include?(seasoning) if seasoning.in?(["醤油", "味噌"])
+
+    region.seasoning == seasoning
+  end
+
+  def meat_matches?(region, meat)
+    return false if meat.blank?
+    return region.meat == meat || region.meat.to_s.include?(meat) || region.meat == "鶏・豚" if meat.in?(["鶏", "豚"])
+
+    region.meat == meat || region.meat.to_s.include?(meat)
+  end
+
+  def record_vote(region)
+    return unless region.is_a?(Region)
+
+    Vote.create!(region: region)
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.warn("Skipped vote recording: #{e.class}: #{e.message}")
   end
 end
